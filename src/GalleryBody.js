@@ -49,8 +49,6 @@ class GalleryBody extends Component {
     }
 
     loadImageOptimized(link) {
-        console.log('loadImageOptimized');
-
         // var loadingImage = loadImage(link.src, 
         //     function (img) {     
         //         let element = document.getElementById(link.src);     
