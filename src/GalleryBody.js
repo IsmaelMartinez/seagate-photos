@@ -1,7 +1,8 @@
 import React, {Component} from 'react';
 import InfiniteScroll from 'react-infinite-scroller';
 import Lightbox from 'react-images';
-// import loadImage from 'blueimp-load-image';
+import Dropzone from 'react-dropzone';
+import request from 'superagent';
 
 class GalleryBody extends Component {
     constructor() {
@@ -10,6 +11,9 @@ class GalleryBody extends Component {
             currentImage: 0
         };
         
+        this.onDrop = this
+            .onDrop
+            .bind(this);
         this.closeLightbox = this
             .closeLightbox
             .bind(this);
@@ -28,15 +32,25 @@ class GalleryBody extends Component {
         this.openLightbox = this
             .openLightbox
             .bind(this);
-
         this.loadItems = this
             .loadItems
             .bind(this);
-
         this.loadImageOptimized = this
             .loadImageOptimized
             .bind(this);
 
+    }
+
+    onDrop(acceptedFiles, rejectedFiles) {
+        const req = request.post('/upload');
+        acceptedFiles.forEach(file => {
+            req.attach(file.name, file);
+            console.log("file added with name", file.name);
+        });
+        console.log("callback to be called");
+        req.end(function (response){
+            console.log(response);
+        });
     }
 
     loadItems() {
@@ -49,23 +63,6 @@ class GalleryBody extends Component {
     }
 
     loadImageOptimized(link) {
-        // var loadingImage = loadImage(link.src, 
-        //     function (img) {     
-        //         let element = document.getElementById(link.src);     
-        //         if (element && img){         
-        //             if (img.type === "error") {
-        //                 console.log("error !!", img);         
-        //             }else {             
-        //                 element.innerHTML = '';             
-        //                 img.className ='rounded';             
-        //                 element.appendChild(img);         
-        //             }     
-        //         } 
-        //     }); 
-        // if(!loadingImage) {     
-        //     console.log('failed to load image');     // Alternative
-        // }
-        //return <img className="w-50" id={link.src} alt={link.alt}/>;
         return <img className="w-100 h-100 rounded img-thumbnail" src={link.src} alt={link.alt}/>;
     }
 
@@ -123,6 +120,11 @@ class GalleryBody extends Component {
             <div className="row mt-5">
 
                 <div>
+                    <div className="dropzone">
+                        <Dropzone onDrop={this.onDrop.bind(this)}>
+                            <p>Try dropping some files here, or click to select files to upload.</p>
+                        </Dropzone>
+                    </div>
                     <InfiniteScroll
                         pageStart={0}
                         className={"row"}

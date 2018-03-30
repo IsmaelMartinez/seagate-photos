@@ -1,7 +1,9 @@
 import React, {Component} from 'react';
 import NavigationBar from './NavigationBar';
 import GalleryBody from './GalleryBody';
+import Dropzone from 'react-dropzone';
 import throttle from 'lodash.throttle';
+import request from 'superagent';
 
 class PhotosApp extends Component {
 
@@ -51,6 +53,18 @@ class PhotosApp extends Component {
         this
             .loadItemsThrottle
             .cancel();
+    }
+
+    onDrop(acceptedFiles, rejectedFiles) {
+        const req = request.post('/upload');
+        acceptedFiles.forEach(file => {
+            req.attach(file.name, file);
+            console.log("file added with name", file.name);
+        });
+        console.log("callback to be called");
+        req.end(function (response){
+            console.log(response);
+        });
     }
 
     loadFolder(pathname) {
@@ -114,21 +128,42 @@ class PhotosApp extends Component {
     }
 
     render() {
+        const overlayStyle = {
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            padding: '2.5em 0',
+            background: 'rgba(0,0,0,0.5)',
+            textAlign: 'center',
+            color: '#fff'
+          };
+              
         return (
             <div className="photosApp container">
-                <NavigationBar
-                    linksSize={this.state.linksSize}
-                    lastLoaded={this.state.lastLoaded}
-                    folders={this.state.folders}
-                    loadFolder={this.loadFolder}
-                    loadAllItems={this.loadAllItems}/>
-
-                <GalleryBody
-                    hasMoreItems={this.state.hasMoreItems}
-                    loadedLinks={this.state.loadedLinks}
-                    loadItems={this.loadItemsThrottle}
-                    />
                 
+                    <NavigationBar
+                        linksSize={this.state.linksSize}
+                        lastLoaded={this.state.lastLoaded}
+                        folders={this.state.folders}
+                        loadFolder={this.loadFolder}
+                        loadAllItems={this.loadAllItems}/>
+<Dropzone
+            //    disableClick
+                style={{position: "relative"}}
+            //    accept={accept}
+                onDrop={this.onDrop.bind(this)}
+            //    onDragEnter={this.onDragEnter.bind(this)}
+            //    onDragLeave={this.onDragLeave.bind(this)}
+                >
+                    <GalleryBody
+                        hasMoreItems={this.state.hasMoreItems}
+                        loadedLinks={this.state.loadedLinks}
+                        loadItems={this.loadItemsThrottle}
+                        />
+                    
+                </Dropzone>
             </div>
         );
     }

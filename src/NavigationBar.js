@@ -24,8 +24,7 @@ class NavigationBar extends Component {
     handleChange = (selectedOption) => {
         this.setState({selectedOption});
         if (selectedOption) {
-            this
-                .props
+            this.props
                 .loadFolder(selectedOption.value);
             console.log(`Selected: ${selectedOption.label}`);
         }
