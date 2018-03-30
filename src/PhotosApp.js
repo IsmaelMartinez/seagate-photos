@@ -56,7 +56,7 @@ class PhotosApp extends Component {
     }
 
     onDrop(acceptedFiles, rejectedFiles) {
-        const req = request.post('/upload');
+        const req = request.post('http://localhost:3001/upload');
         acceptedFiles.forEach(file => {
             req.attach(file.name, file);
             console.log("file added with name", file.name);
