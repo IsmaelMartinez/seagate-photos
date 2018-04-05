@@ -58,7 +58,7 @@ class NavigationBar extends Component {
                     </li>
                     <div className="nav-item w-25 ml-2">
                         <button className="btn float-right btn-secondary" onClick={this.loadAllItems}>
-                            Upload Photos</button>
+                            Load All</button>
                         
                     </div>
                 </ul>

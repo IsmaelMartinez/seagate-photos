@@ -54,22 +54,28 @@ class GalleryBody extends Component {
     }
 
     gotoPrevious() {
+        console.log('gotoPrevious');
         this.setState({
             currentImage: this.state.currentImage - 1
         });
     }
 
     gotoNext() {
+        console.log('gotoNext');
         this.setState({
             currentImage: this.state.currentImage + 1
         });
+        this.props.loadAllItems();
     }
 
     gotoImage(index) {
+        console.log('gotoImage');
         this.setState({currentImage: index});
+        
     }
 
-    handleClickImage() {
+    handleClickImage(e) {
+        console.log('handleClickImage');
         if (this.state.currentImage === this.state.linksSize - 1) 
             return;
         this.gotoNext();

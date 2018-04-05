@@ -1,26 +1,91 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 )
 
 func main() {
 	http.HandleFunc("/upload", uploadHandler)
+	http.HandleFunc("/list", listHandler)
+	http.HandleFunc("/", getHandler)
 
 	//Listen on port 3001
 	log.Fatal(http.ListenAndServe(":3001", nil))
 }
 
-func uploadHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf(r.Method)
+type FileInfo struct {
+	Name    string
+	Size    int64
+	Mode    os.FileMode
+	ModTime time.Time
+	IsDir   bool
+}
+
+func getHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	//POST takes the uploaded file(s) and saves it to disk.
+	case "GET":
+		log.Println(r.URL.Path)
+		img, err := os.Open("C:\\seagate\\Photos\\" + r.URL.Path)
+		if err != nil {
+			log.Fatal(err) // perhaps handle this nicer
+		}
+		defer img.Close()
+		w.Header().Set("Content-Type", "image/jpg")
+		io.Copy(w, img)
+	}
+}
+
+func listHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		w.Header().Set("Content-Type", "application/json")
+		log.Printf("Get Method called")
+		for k, v := range r.Form {
+			log.Println(k)
+			fmt.Println("key:", k)
+			fmt.Println("val:", strings.Join(v, ""))
+		}
+		queryValues := r.URL.Query()
+		pathName := queryValues.Get("pathname")
+		files, err := ioutil.ReadDir("C:\\seagate\\Photos\\" + pathName)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list := []FileInfo{}
+
+		for _, file := range files {
+			f := FileInfo{
+				Name:    file.Name(),
+				Size:    file.Size(),
+				Mode:    file.Mode(),
+				ModTime: file.ModTime(),
+				IsDir:   file.IsDir(),
+			}
+			list = append(list, f)
+		}
+		output, err := json.Marshal(list)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(string(output))
+		w.Write(output)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
 	case "POST":
-		//get the multipart reader for the request.
 		reader, err := r.MultipartReader()
 
 		if err != nil {
@@ -28,14 +93,12 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//copy each part to destination.
 		for {
 			part, err := reader.NextPart()
 			if err == io.EOF {
 				break
 			}
 
-			//if part.FileName() is empty, skip this iteration.
 			if part.FileName() == "" {
 				continue
 			}
@@ -53,8 +116,6 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		fmt.Fprintf(w, "OK")
-		//display success message.
-		//display(w, "upload", "Upload successful.")
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}

@@ -20,19 +20,22 @@ class PhotosApp extends Component {
             hasMoreItems: true
         };
 
-        fetch('http://192.168.5.8', {mode: 'cors'}).then(function (response) {
-            return response.text();
+        fetch('http://localhost:3001/list', {mode: 'cors'}).then(function (response) {
+            return response.json();
         })
-            .then(function (text) {
-                const parser = new DOMParser();
-                let doc = parser.parseFromString(text, "text/html");
+            .then(function (json) {
+                // const parser = new DOMParser();
+                // let doc = parser.parseFromString(text, "text/html");
                 let folders = [];
-                console.log('folders', doc.links);
-                for (var i = 1; i < doc.links.length; i++) {
-                    folders.push({
-                        'label': doc.links[i].text,
-                        'value': doc.links[i].pathname
-                    });
+                console.log('folders', json);
+                for (var i = 0; i < json.length; i++) {
+                    if(json[i].IsDir) {
+                        folders.push({
+                            'label': json[i].Name,
+                            'value': json[i].Name
+                        });
+                    }
+                    
                 }
                 that.setState({folders: folders});
             });
@@ -78,22 +81,25 @@ class PhotosApp extends Component {
             hasMoreItems: true,
             nextHref: null
         });
-        fetch('http://192.168.5.8' + pathname, {mode: 'cors'}).then(function (response) {
-            return response.text();
+        fetch('http://localhost:3001/list?pathname=' + pathname, {mode: 'cors'}).then(function (response) {
+            return response.json();
         })
-            .then(function (text) {
-                const parser = new DOMParser();
-                let doc = parser.parseFromString(text, "text/html");
+            .then(function (json) {
+                // const parser = new DOMParser();
+                // let doc = parser.parseFromString(text, "text/html");
                 let links = [];
                 let loadedLinks = [];
-                console.log(doc.links);
-                for (var i = 1; i < doc.links.length; i++) {
-                    if(doc.links[i].pathname.includes('jpg')|| doc.links[i].pathname.includes('JPG')){
-                        links.push({
-                            'alt': doc.links[i].text,
-                            'src': 'http://192.168.5.8' + doc.links[i].pathname
-                        });
+                console.log(json);
+                for (var i = 1; i < json.length; i++) {
+                    if (!json[i].IsDir) {
+                        if(json[i].Name.includes('jpg')|| json[i].Name.includes('JPG')){
+                            links.push({
+                                'alt': json[i].Name,
+                                'src': 'http://localhost:3001/' + pathname + '/' + json[i].Name
+                            });
+                        }
                     }
+                    
                 }
                 loadedLinks.push(links[0]);
                 that.setState({
@@ -123,22 +129,13 @@ class PhotosApp extends Component {
     }
 
     loadAllItems(e) {
-        e.preventDefault();
+        if (e){
+            e.preventDefault();
+        }
         this.setState({loadedLinks: this.state.links, lastLoaded: this.state.linksSize, hasMoreItems: false});
     }
 
     render() {
-        const overlayStyle = {
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0,
-            padding: '2.5em 0',
-            background: 'rgba(0,0,0,0.5)',
-            textAlign: 'center',
-            color: '#fff'
-          };
               
         return (
             <div className="photosApp container">
@@ -149,18 +146,16 @@ class PhotosApp extends Component {
                         folders={this.state.folders}
                         loadFolder={this.loadFolder}
                         loadAllItems={this.loadAllItems}/>
-<Dropzone
-            //    disableClick
-                style={{position: "relative"}}
-            //    accept={accept}
-                onDrop={this.onDrop.bind(this)}
-            //    onDragEnter={this.onDragEnter.bind(this)}
-            //    onDragLeave={this.onDragLeave.bind(this)}
-                >
+                    <Dropzone
+                        disableClick
+                        style={{position: "relative"}}
+                        onDrop={this.onDrop.bind(this)}
+                    >
                     <GalleryBody
                         hasMoreItems={this.state.hasMoreItems}
                         loadedLinks={this.state.loadedLinks}
                         loadItems={this.loadItemsThrottle}
+                        loadAllItems={this.loadAllItems}
                         />
                     
                 </Dropzone>
