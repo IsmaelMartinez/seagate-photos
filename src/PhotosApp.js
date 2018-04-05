@@ -59,14 +59,14 @@ class PhotosApp extends Component {
     }
 
     onDrop(acceptedFiles, rejectedFiles) {
-        const req = request.post('http://localhost:3001/upload');
+        var that = this;
+        const req = request.post('http://localhost:3001/upload?pathname='+this.state.pathname);
         acceptedFiles.forEach(file => {
             req.attach(file.name, file);
             console.log("file added with name", file.name);
         });
-        console.log("callback to be called");
-        req.end(function (response){
-            console.log(response);
+        req.end(function (){
+            that.loadFolder(that.state.pathname);
         });
     }
 
@@ -76,6 +76,7 @@ class PhotosApp extends Component {
             linksSize: 0,
             lastLoaded: 0,
             currentImage: 0,
+            pathname: pathname,
             links: [],
             loadedLinks: [],
             hasMoreItems: true,
@@ -153,6 +154,7 @@ class PhotosApp extends Component {
                     >
                     <GalleryBody
                         hasMoreItems={this.state.hasMoreItems}
+                        linksSize={this.state.linksSize}
                         loadedLinks={this.state.loadedLinks}
                         loadItems={this.loadItemsThrottle}
                         loadAllItems={this.loadAllItems}

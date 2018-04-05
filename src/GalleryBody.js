@@ -76,7 +76,7 @@ class GalleryBody extends Component {
 
     handleClickImage(e) {
         console.log('handleClickImage');
-        if (this.state.currentImage === this.state.linksSize - 1) 
+        if (this.state.currentImage === this.props.linksSize - 1) 
             return;
         this.gotoNext();
     }

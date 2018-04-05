@@ -92,7 +92,8 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
+		queryValues := r.URL.Query()
+		pathName := queryValues.Get("pathname")
 		for {
 			part, err := reader.NextPart()
 			if err == io.EOF {
@@ -102,7 +103,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			if part.FileName() == "" {
 				continue
 			}
-			dst, err := os.Create("" + part.FileName())
+			dst, err := os.Create("C:\\Seagate\\Photos\\" + pathName + "\\" + part.FileName())
 			defer dst.Close()
 
 			if err != nil {
