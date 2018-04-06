@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import Select from 'react-select';
 import 'react-select/dist/react-select.css';
+import Dropzone from 'react-dropzone';
 
 class NavigationBar extends Component {
     state = {
@@ -30,6 +31,12 @@ class NavigationBar extends Component {
         }
     }
 
+    openDropZone() {
+        console.log(this.props);
+        console.log(this.props.dropzoneRef);
+        // this.props.dropzoneRef.open()
+    }
+
     render() {
         const {selectedOption} = this.state;
         const value = selectedOption && selectedOption.value;
@@ -57,8 +64,18 @@ class NavigationBar extends Component {
                             options={this.props.folders}/>
                     </li>
                     <div className="nav-item w-25 ml-2">
+                    <Dropzone
+                                    style={{width:"120px"}}
+                                    onDrop={this.props.onDrop}>
+                                    
+                        <button className="btn float-left btn-secondary">
+                            
+                                        Open File Dialog
+                            
+                        </button></Dropzone>
                         <button className="btn float-right btn-secondary" onClick={this.loadAllItems}>
                             Load All</button>
+                        
                         
                     </div>
                 </ul>

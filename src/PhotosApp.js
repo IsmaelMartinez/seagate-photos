@@ -24,8 +24,6 @@ class PhotosApp extends Component {
             return response.json();
         })
             .then(function (json) {
-                // const parser = new DOMParser();
-                // let doc = parser.parseFromString(text, "text/html");
                 let folders = [];
                 console.log('folders', json);
                 for (var i = 0; i < json.length; i++) {
@@ -71,6 +69,10 @@ class PhotosApp extends Component {
     }
 
     loadFolder(pathname) {
+        if (!pathname) {
+            console.log("no pathname");
+            return;
+        }
         var that = this;
         this.setState({
             linksSize: 0,
@@ -86,17 +88,17 @@ class PhotosApp extends Component {
             return response.json();
         })
             .then(function (json) {
-                // const parser = new DOMParser();
-                // let doc = parser.parseFromString(text, "text/html");
                 let links = [];
                 let loadedLinks = [];
                 console.log(json);
-                for (var i = 1; i < json.length; i++) {
+                for (var i = 0; i < json.length; i++) {
                     if (!json[i].IsDir) {
-                        if(json[i].Name.includes('jpg')|| json[i].Name.includes('JPG')){
+                        if(!json[i].Name.includes('.db')){
+
                             links.push({
                                 'alt': json[i].Name,
-                                'src': 'http://localhost:3001/' + pathname + '/' + json[i].Name
+                                'src': 'http://localhost:3001/' + pathname + '/' + json[i].Name,
+                                'caption': json[i].Name
                             });
                         }
                     }
@@ -116,11 +118,18 @@ class PhotosApp extends Component {
     loadItems() {
         console.log('loadedItems');
 
+        if (!this.state.hasMoreItems){
+            console.log('all loaded');
+            return;
+        }
         var lastLoaded = this.state.lastLoaded;
         var loaded = this.state.loadedLinks;
         loaded.push(this.state.links[lastLoaded]);
 
         lastLoaded = lastLoaded + 1;
+
+        console.log("lastLoaded", lastLoaded)
+        //console.log("lastLoaded", loaded)
 
         this.setState({
             loadedLinks: loaded,
@@ -137,21 +146,23 @@ class PhotosApp extends Component {
     }
 
     render() {
-              
+        let dropzoneRef;
         return (
             <div className="photosApp container">
-                
+                <Dropzone
+                        disableClick
+                        style={{position: "relative"}}
+                        onDrop={this.onDrop.bind(this)}
+                    >
                     <NavigationBar
                         linksSize={this.state.linksSize}
                         lastLoaded={this.state.lastLoaded}
                         folders={this.state.folders}
                         loadFolder={this.loadFolder}
-                        loadAllItems={this.loadAllItems}/>
-                    <Dropzone
-                        disableClick
-                        style={{position: "relative"}}
+                        loadAllItems={this.loadAllItems}
                         onDrop={this.onDrop.bind(this)}
-                    >
+                        />
+                    
                     <GalleryBody
                         hasMoreItems={this.state.hasMoreItems}
                         linksSize={this.state.linksSize}

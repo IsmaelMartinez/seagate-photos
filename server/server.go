@@ -55,6 +55,11 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		queryValues := r.URL.Query()
 		pathName := queryValues.Get("pathname")
+		if strings.Compare(pathName, "undefined") == 0 {
+
+			http.Error(w, "no path provided", http.StatusInternalServerError)
+			return
+		}
 		files, err := ioutil.ReadDir("C:\\seagate\\Photos\\" + pathName)
 		if err != nil {
 			log.Fatal(err)
@@ -87,13 +92,20 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		reader, err := r.MultipartReader()
-
+		log.Printf("POST upload Method called")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		queryValues := r.URL.Query()
 		pathName := queryValues.Get("pathname")
+
+		log.Println(pathName)
+		if strings.Compare(pathName, "undefined") == 0 {
+
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		for {
 			part, err := reader.NextPart()
 			if err == io.EOF {
@@ -103,6 +115,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			if part.FileName() == "" {
 				continue
 			}
+
 			dst, err := os.Create("C:\\Seagate\\Photos\\" + pathName + "\\" + part.FileName())
 			defer dst.Close()
 

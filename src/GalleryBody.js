@@ -127,6 +127,7 @@ class GalleryBody extends Component {
                         onClickNext={this.gotoNext}
                         onClickPrev={this.gotoPrevious}
                         onClickThumbnail={this.gotoImage}
+                        showThumbnails={true}
                         onClose={this.closeLightbox}/>
                 </div>
             </div>
