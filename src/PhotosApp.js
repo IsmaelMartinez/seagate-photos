@@ -98,7 +98,8 @@ class PhotosApp extends Component {
                             links.push({
                                 'alt': json[i].Name,
                                 'src': 'http://localhost:3001/' + pathname + '/' + json[i].Name,
-                                'caption': json[i].Name
+                                'caption': json[i].Name,
+                                'contentType': json[i].ContentType
                             });
                         }
                     }
@@ -127,9 +128,6 @@ class PhotosApp extends Component {
         loaded.push(this.state.links[lastLoaded]);
 
         lastLoaded = lastLoaded + 1;
-
-        console.log("lastLoaded", lastLoaded)
-        //console.log("lastLoaded", loaded)
 
         this.setState({
             loadedLinks: loaded,

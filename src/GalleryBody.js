@@ -30,10 +30,7 @@ class GalleryBody extends Component {
         this.loadItems = this
             .loadItems
             .bind(this);
-        this.loadImageOptimized = this
-            .loadImageOptimized
-            .bind(this);
-
+     
     }
 
     loadItems() {
@@ -43,10 +40,6 @@ class GalleryBody extends Component {
     openLightbox(index, event) {
         event.preventDefault();
         this.setState({currentImage: index, lightboxIsOpen: true});
-    }
-
-    loadImageOptimized(link) {
-        return <img className="w-100 h-100 rounded img-thumbnail" src={link.src} alt={link.alt}/>;
     }
 
     closeLightbox() {
@@ -91,16 +84,27 @@ class GalleryBody extends Component {
             .loadedLinks
             .map((link, i) => {
                 if (link) {
-                    items.push(
-                        <a
+                    if (link.contentType.includes('image')) {
+                        items.push(
+                            <a
                             href={link.src}
                             id={link.src}
                             key={i}
                             className="col-6 mt-4"
                             onClick={(e) => this.openLightbox(i, e)}>
-                            {this.loadImageOptimized(link)}
-                        </a>
-                    );
+                            <img className="w-100 h-100 rounded img-thumbnail" src={link.src} alt={link.contentType}/>;
+                        </a>);
+                    } else if (link.contentType.includes('video') || link.contentType.includes('octet-stream')) {
+                        items.push(
+                            <video width="320" height="240" controls>
+                                <source src={link.src} type={link.contentType}/>
+                            </video>);
+                    } else {
+                        items.push(
+                            <div>{link.contentType}</div>    
+                        );
+                    }
+                    
                 }
                 return items;
             });

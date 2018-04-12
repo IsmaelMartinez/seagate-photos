@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"strings"
@@ -22,24 +23,33 @@ func main() {
 }
 
 type FileInfo struct {
-	Name    string
-	Size    int64
-	Mode    os.FileMode
-	ModTime time.Time
-	IsDir   bool
+	Name        string
+	Size        int64
+	Mode        os.FileMode
+	ModTime     time.Time
+	IsDir       bool
+	ContentType string
 }
 
 func getHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		log.Println(r.URL.Path)
-		img, err := os.Open("C:\\seagate\\Photos\\" + r.URL.Path)
+		file, err := os.Open("Z:\\Photos\\" + r.URL.Path)
 		if err != nil {
-			log.Fatal(err) // perhaps handle this nicer
+			log.Fatal(err)
 		}
-		defer img.Close()
-		w.Header().Set("Content-Type", "image/jpg")
-		io.Copy(w, img)
+		log.Println(mime.TypeByExtension("." + strings.Split(file.Name(), ".")[1]))
+		// buffer := make([]byte, 512)
+		// _, err = file.Read(buffer)
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+		// contentType := http.DetectContentType(buffer)
+		// log.Println(contentType)
+		defer file.Close()
+		w.Header().Set("Content-Type", mime.TypeByExtension("."+strings.Split(file.Name(), ".")[1]))
+		io.Copy(w, file)
 	}
 }
 
@@ -48,19 +58,15 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		w.Header().Set("Content-Type", "application/json")
 		log.Printf("Get Method called")
-		for k, v := range r.Form {
-			log.Println(k)
-			fmt.Println("key:", k)
-			fmt.Println("val:", strings.Join(v, ""))
-		}
 		queryValues := r.URL.Query()
 		pathName := queryValues.Get("pathname")
+		log.Println(pathName)
 		if strings.Compare(pathName, "undefined") == 0 {
 
 			http.Error(w, "no path provided", http.StatusInternalServerError)
 			return
 		}
-		files, err := ioutil.ReadDir("C:\\seagate\\Photos\\" + pathName)
+		files, err := ioutil.ReadDir("Z:\\Photos\\" + pathName)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -68,12 +74,29 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 		list := []FileInfo{}
 
 		for _, file := range files {
+			log.Println("reading file", file.Name())
+			contentType := "folder"
+			if !file.IsDir() {
+				openFile, err := os.Open("Z:\\Photos\\" + pathName + "\\" + file.Name())
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer openFile.Close()
+				buffer := make([]byte, 512)
+				_, err = openFile.Read(buffer)
+				if err != nil {
+					log.Fatal(err)
+				}
+				contentType = http.DetectContentType(buffer)
+			}
+
 			f := FileInfo{
-				Name:    file.Name(),
-				Size:    file.Size(),
-				Mode:    file.Mode(),
-				ModTime: file.ModTime(),
-				IsDir:   file.IsDir(),
+				Name:        file.Name(),
+				Size:        file.Size(),
+				Mode:        file.Mode(),
+				ModTime:     file.ModTime(),
+				IsDir:       file.IsDir(),
+				ContentType: contentType,
 			}
 			list = append(list, f)
 		}
@@ -116,7 +139,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			dst, err := os.Create("C:\\Seagate\\Photos\\" + pathName + "\\" + part.FileName())
+			dst, err := os.Create("Z:\\Photos\\" + pathName + "\\" + part.FileName())
 			defer dst.Close()
 
 			if err != nil {
