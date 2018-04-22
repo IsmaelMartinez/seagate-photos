@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ func main() {
 	http.HandleFunc("/", getHandler)
 
 	openDB()
+	walkDirectories()
 	//Listen on port 3001
 	log.Fatal(http.ListenAndServe(":3001", nil))
 }
@@ -42,6 +44,42 @@ type FileInfo struct {
 	ModTime     time.Time
 	IsDir       bool
 	ContentType string
+}
+
+func walkDirectories() {
+	fileList := []string{}
+	currentBucket := ""
+	err := filepath.Walk(photosPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", photosPath, err)
+			return err
+		}
+
+		fileList = append(fileList, path)
+		if info.IsDir() {
+			// add to folder "list" or bucket
+			currentBucket = path[len(photosPath):]
+			fmt.Printf("Entering bucket %q\n", currentBucket)
+		} else {
+			//ignore the photos.db file else things pertains to music!
+			fmt.Printf("%q is a File for bucket %q \n", path, currentBucket)
+			//read file info
+			//add to file for "folder" in db
+		}
+		// 	fmt.Printf("skipping a dir without errors: %+v \n", info.Name())
+		// 	return filepath.SkipDir
+		// }
+		//fmt.Printf("visited file: %q\n", path)
+		return nil
+	})
+
+	// for _, file := range fileList {
+	// 	fmt.Println(file)
+	// }
+
+	if err != nil {
+		fmt.Printf("error walking the path %q: %v\n", photosPath, err)
+	}
 }
 
 func getFilesForPath(pathName string) []FileInfo {
