@@ -144,7 +144,6 @@ class PhotosApp extends Component {
     }
 
     render() {
-        let dropzoneRef;
         return (
             <div className="photosApp container">
                 <Dropzone
