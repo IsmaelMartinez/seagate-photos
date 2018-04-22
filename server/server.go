@@ -44,6 +44,44 @@ type FileInfo struct {
 	ContentType string
 }
 
+func getFilesForPath(pathName string) []FileInfo {
+	files, err := ioutil.ReadDir(photosPath + pathName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list := []FileInfo{}
+
+	for _, file := range files {
+		log.Println("reading file", file.Name())
+		contentType := "folder"
+		if !file.IsDir() {
+			openFile, err := os.Open(photosPath + pathName + "/" + file.Name())
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer openFile.Close()
+			buffer := make([]byte, 512)
+			_, err = openFile.Read(buffer)
+			if err != nil {
+				log.Fatal(err)
+			}
+			contentType = http.DetectContentType(buffer)
+		}
+
+		f := FileInfo{
+			Name:        file.Name(),
+			Size:        file.Size(),
+			Mode:        file.Mode(),
+			ModTime:     file.ModTime(),
+			IsDir:       file.IsDir(),
+			ContentType: contentType,
+		}
+		list = append(list, f)
+	}
+	return list
+}
+
 func getHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -53,13 +91,6 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 			log.Fatal(err)
 		}
 		log.Println(mime.TypeByExtension("." + strings.Split(file.Name(), ".")[1]))
-		// buffer := make([]byte, 512)
-		// _, err = file.Read(buffer)
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
-		// contentType := http.DetectContentType(buffer)
-		// log.Println(contentType)
 		defer file.Close()
 		w.Header().Set("Content-Type", mime.TypeByExtension("."+strings.Split(file.Name(), ".")[1]))
 		io.Copy(w, file)
@@ -75,45 +106,10 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 		pathName := queryValues.Get("pathname")
 		log.Println(pathName)
 		if strings.Compare(pathName, "undefined") == 0 {
-
 			http.Error(w, "no path provided", http.StatusInternalServerError)
 			return
 		}
-		files, err := ioutil.ReadDir((photosPath + pathName))
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		list := []FileInfo{}
-
-		for _, file := range files {
-			log.Println("reading file", file.Name())
-			contentType := "folder"
-			if !file.IsDir() {
-				openFile, err := os.Open(photosPath + pathName + "/" + file.Name())
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer openFile.Close()
-				buffer := make([]byte, 512)
-				_, err = openFile.Read(buffer)
-				if err != nil {
-					log.Fatal(err)
-				}
-				contentType = http.DetectContentType(buffer)
-			}
-
-			f := FileInfo{
-				Name:        file.Name(),
-				Size:        file.Size(),
-				Mode:        file.Mode(),
-				ModTime:     file.ModTime(),
-				IsDir:       file.IsDir(),
-				ContentType: contentType,
-			}
-			list = append(list, f)
-		}
-		output, err := json.Marshal(list)
+		output, err := json.Marshal(getFilesForPath(pathName))
 		if err != nil {
 			log.Fatal(err)
 		}
