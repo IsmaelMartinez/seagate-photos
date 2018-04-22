@@ -11,15 +11,28 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/boltdb/bolt"
 )
+
+const photosPath = "//192.168.5.8/Seagate/Photos/"
 
 func main() {
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/list", listHandler)
 	http.HandleFunc("/", getHandler)
 
+	openDB()
 	//Listen on port 3001
 	log.Fatal(http.ListenAndServe(":3001", nil))
+}
+
+func openDB() {
+	db, err := bolt.Open(photosPath+"photos.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 }
 
 type FileInfo struct {
@@ -35,7 +48,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		log.Println(r.URL.Path)
-		file, err := os.Open("Z:\\Photos\\" + r.URL.Path)
+		file, err := os.Open(photosPath + r.URL.Path)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -66,7 +79,7 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "no path provided", http.StatusInternalServerError)
 			return
 		}
-		files, err := ioutil.ReadDir("Z:\\Photos\\" + pathName)
+		files, err := ioutil.ReadDir((photosPath + pathName))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -77,7 +90,7 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println("reading file", file.Name())
 			contentType := "folder"
 			if !file.IsDir() {
-				openFile, err := os.Open("Z:\\Photos\\" + pathName + "\\" + file.Name())
+				openFile, err := os.Open(photosPath + pathName + "/" + file.Name())
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -139,7 +152,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			dst, err := os.Create("Z:\\Photos\\" + pathName + "\\" + part.FileName())
+			dst, err := os.Create(photosPath + pathName + "/" + part.FileName())
 			defer dst.Close()
 
 			if err != nil {
