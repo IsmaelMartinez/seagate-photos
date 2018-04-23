@@ -31,12 +31,6 @@ class NavigationBar extends Component {
         }
     }
 
-    openDropZone() {
-        console.log(this.props);
-        console.log(this.props.dropzoneRef);
-        // this.props.dropzoneRef.open()
-    }
-
     render() {
         const {selectedOption} = this.state;
         const value = selectedOption && selectedOption.value;

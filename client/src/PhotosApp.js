@@ -20,7 +20,7 @@ class PhotosApp extends Component {
             hasMoreItems: true
         };
 
-        fetch('http://localhost:3001/list', {mode: 'cors'}).then(function (response) {
+        fetch('http://localhost:3001/list').then(function (response) {
             return response.json();
         })
             .then(function (json) {
@@ -84,7 +84,7 @@ class PhotosApp extends Component {
             hasMoreItems: true,
             nextHref: null
         });
-        fetch('http://localhost:3001/list?pathname=' + pathname, {mode: 'cors'}).then(function (response) {
+        fetch('http://localhost:3001/list?pathname=' + pathname).then(function (response) {
             return response.json();
         })
             .then(function (json) {
@@ -97,7 +97,7 @@ class PhotosApp extends Component {
 
                             links.push({
                                 'alt': json[i].Name,
-                                'src': 'http://localhost:3001/' + pathname + '/' + json[i].Name,
+                                'src': 'http://localhost:3001/get?pathname=' + pathname + '/' + json[i].Name,
                                 'caption': json[i].Name,
                                 'contentType': json[i].ContentType
                             });

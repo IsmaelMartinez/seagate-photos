@@ -18,13 +18,16 @@ import (
 
 const photosPath = "//192.168.5.8/Seagate/Photos/"
 
+//const photosPath = "C:\\Users\\Ismael\\Pictures\\"
+
 func main() {
 	http.HandleFunc("/upload", uploadHandler)
 	http.HandleFunc("/list", listHandler)
-	http.HandleFunc("/", getHandler)
+	http.HandleFunc("/get", getHandler)
+	http.Handle("/", http.FileServer(http.Dir("../client/build")))
 
 	openDB()
-	walkDirectories()
+	//	walkDirectories()
 	//Listen on port 3001
 	log.Fatal(http.ListenAndServe(":3001", nil))
 }
@@ -37,7 +40,7 @@ func openDB() {
 	defer db.Close()
 }
 
-type FileInfo struct {
+type fileInfo struct {
 	Name        string
 	Size        int64
 	Mode        os.FileMode
@@ -82,13 +85,13 @@ func walkDirectories() {
 	}
 }
 
-func getFilesForPath(pathName string) []FileInfo {
+func getFilesForPath(pathName string) []fileInfo {
 	files, err := ioutil.ReadDir(photosPath + pathName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	list := []FileInfo{}
+	list := []fileInfo{}
 
 	for _, file := range files {
 		log.Println("reading file", file.Name())
@@ -107,7 +110,7 @@ func getFilesForPath(pathName string) []FileInfo {
 			contentType = http.DetectContentType(buffer)
 		}
 
-		f := FileInfo{
+		f := fileInfo{
 			Name:        file.Name(),
 			Size:        file.Size(),
 			Mode:        file.Mode(),
@@ -123,8 +126,15 @@ func getFilesForPath(pathName string) []FileInfo {
 func getHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		log.Println(r.URL.Path)
-		file, err := os.Open(photosPath + r.URL.Path)
+		queryValues := r.URL.Query()
+		pathName := queryValues.Get("pathname")
+		log.Println(pathName)
+		if strings.Compare(pathName, "undefined") == 0 {
+			http.Error(w, "no path provided", http.StatusInternalServerError)
+			return
+		}
+		log.Println("Get Method called for getHandler with path", pathName)
+		file, err := os.Open(photosPath + pathName)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -139,7 +149,7 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		w.Header().Set("Content-Type", "application/json")
-		log.Printf("Get Method called")
+		log.Printf("Get Method called for listHandler")
 		queryValues := r.URL.Query()
 		pathName := queryValues.Get("pathname")
 		log.Println(pathName)
