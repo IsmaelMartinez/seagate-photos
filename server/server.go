@@ -26,18 +26,60 @@ func main() {
 	http.HandleFunc("/get", getHandler)
 	http.Handle("/", http.FileServer(http.Dir("../client/build")))
 
-	openDB()
-	//	walkDirectories()
+	walkDirectories()
 	//Listen on port 3001
 	log.Fatal(http.ListenAndServe(":3001", nil))
+
 }
 
-func openDB() {
+func openDB() *bolt.DB {
 	db, err := bolt.Open(photosPath+"photos.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Fatal(err)
 	}
+	return db
+}
+
+func walkDirectories() {
+	db := openDB()
 	defer db.Close()
+	fileList := []string{}
+	currentBucket := ""
+	err := filepath.Walk(photosPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Printf("prevent panic by handling failure accessing a path %q: %v\n", photosPath, err)
+			return err
+		}
+
+		fileList = append(fileList, path)
+		if info.IsDir() {
+			currentBucket = path[len(photosPath):]
+			db.Update(func(tx *bolt.Tx) error {
+				_, err := tx.CreateBucketIfNotExists([]byte(currentBucket))
+				if err != nil {
+					log.Printf("create bucket: %v\n", err)
+					return err
+				}
+				return nil
+			})
+			log.Printf("Entering bucket %q\n", currentBucket)
+		} else {
+			//ignore the photos.db file else things pertains to music!
+			//ignore other files that aren't interesting (like ddesktop.ini)
+			db.Update(func(tx *bolt.Tx) error {
+				//read file exif info
+				b := tx.Bucket([]byte(currentBucket))
+				err := b.Put([]byte(path), []byte(getFileInfoFromPathName(path)))
+				return err
+			})
+
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.Printf("error walking the path %q: %v\n", photosPath, err)
+	}
 }
 
 type fileInfo struct {
@@ -49,43 +91,84 @@ type fileInfo struct {
 	ContentType string
 }
 
-func walkDirectories() {
-	fileList := []string{}
-	currentBucket := ""
-	err := filepath.Walk(photosPath, func(path string, info os.FileInfo, err error) error {
+func getFileInfo(pathName string, name string, size int64, mode os.FileMode, modtime time.Time, isDir bool) fileInfo {
+
+	log.Println("reading file", name)
+	contentType := "folder"
+	if !isDir {
+		openFile, err := os.Open(photosPath + pathName + "/" + name)
 		if err != nil {
-			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", photosPath, err)
-			return err
+			log.Fatal(err)
 		}
-
-		fileList = append(fileList, path)
-		if info.IsDir() {
-			// add to folder "list" or bucket
-			currentBucket = path[len(photosPath):]
-			fmt.Printf("Entering bucket %q\n", currentBucket)
-		} else {
-			//ignore the photos.db file else things pertains to music!
-			fmt.Printf("%q is a File for bucket %q \n", path, currentBucket)
-			//read file info
-			//add to file for "folder" in db
+		defer openFile.Close()
+		buffer := make([]byte, 512)
+		_, err = openFile.Read(buffer)
+		if err != nil {
+			log.Fatal(err)
 		}
-		// 	fmt.Printf("skipping a dir without errors: %+v \n", info.Name())
-		// 	return filepath.SkipDir
-		// }
-		//fmt.Printf("visited file: %q\n", path)
-		return nil
-	})
+		contentType = http.DetectContentType(buffer)
+	}
 
-	// for _, file := range fileList {
-	// 	fmt.Println(file)
-	// }
+	f := fileInfo{
+		Name:        name,
+		Size:        size,
+		Mode:        mode,
+		ModTime:     modtime,
+		IsDir:       isDir,
+		ContentType: contentType,
+	}
+	return f
+}
+
+func getFileInfoFromPathName(pathName string) []byte {
+
+	log.Println("reading file", pathName)
+	contentType := "folder"
+	openFile, err := os.Open(pathName)
 
 	if err != nil {
-		fmt.Printf("error walking the path %q: %v\n", photosPath, err)
+		log.Fatal(err)
 	}
+	defer openFile.Close()
+	buffer := make([]byte, 512)
+	_, err = openFile.Read(buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	contentType = http.DetectContentType(buffer)
+	fi, err := os.Stat(pathName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	finfo := fileInfo{
+		Name:        openFile.Name(),
+		Size:        fi.Size(),
+		Mode:        fi.Mode(),
+		ModTime:     fi.ModTime(),
+		IsDir:       fi.IsDir(),
+		ContentType: contentType,
+	}
+	result, _ := json.Marshal(finfo)
+	return result
 }
 
 func getFilesForPath(pathName string) []fileInfo {
+	log.Println("Entering getFilesForPath")
+	db := openDB()
+	defer db.Close()
+	db.View(func(tx *bolt.Tx) error {
+		log.Printf("geting bucket %s", pathName)
+		b := tx.Bucket([]byte(pathName))
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			log.Printf("key=%s, value=%s\n", k, v)
+		}
+		// v := b.Get([]byte(path))
+		// fmt.Printf("The answer is: %s\n", v)
+		return nil
+	})
 	files, err := ioutil.ReadDir(photosPath + pathName)
 	if err != nil {
 		log.Fatal(err)
@@ -94,30 +177,7 @@ func getFilesForPath(pathName string) []fileInfo {
 	list := []fileInfo{}
 
 	for _, file := range files {
-		log.Println("reading file", file.Name())
-		contentType := "folder"
-		if !file.IsDir() {
-			openFile, err := os.Open(photosPath + pathName + "/" + file.Name())
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer openFile.Close()
-			buffer := make([]byte, 512)
-			_, err = openFile.Read(buffer)
-			if err != nil {
-				log.Fatal(err)
-			}
-			contentType = http.DetectContentType(buffer)
-		}
-
-		f := fileInfo{
-			Name:        file.Name(),
-			Size:        file.Size(),
-			Mode:        file.Mode(),
-			ModTime:     file.ModTime(),
-			IsDir:       file.IsDir(),
-			ContentType: contentType,
-		}
+		f := getFileInfo(pathName, file.Name(), file.Size(), file.Mode(), file.ModTime(), file.IsDir())
 		list = append(list, f)
 	}
 	return list
