@@ -94,11 +94,11 @@ class GalleryBody extends Component {
                             onClick={(e) => this.openLightbox(i, e)}>
                             <img className="w-100 h-100 rounded img-thumbnail" src={link.src} alt={link.contentType}/>
                         </a>);
-                    // } else if (link.contentType.includes('video') || link.contentType.includes('octet-stream')) {
-                    //     items.push(
-                    //         <video width="320" height="240" controls>
-                    //             <source src={link.src} type={link.contentType}/>
-                    //         </video>);
+                    } else if (link.contentType.includes('video') || link.contentType.includes('octet-stream')) {
+                        items.push(
+                            <video className="col-6 mt-4 w-100 h-100 rounded img-thumbnail" width="640" height="480" controls>
+                                <source src={link.src} type={link.contentType}/>
+                            </video>);
                     } else {
                         items.push(
                             <div>{link.contentType}</div>    
@@ -131,7 +131,7 @@ class GalleryBody extends Component {
                         onClickNext={this.gotoNext}
                         onClickPrev={this.gotoPrevious}
                         onClickThumbnail={this.gotoImage}
-                        showThumbnails={true}
+                        //showThumbnails={true}
                         onClose={this.closeLightbox}/>
                 </div>
             </div>

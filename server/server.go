@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime"
 	"net/http"
@@ -26,14 +25,14 @@ func main() {
 	http.HandleFunc("/get", getHandler)
 	http.Handle("/", http.FileServer(http.Dir("../client/build")))
 
-	walkDirectories()
+	//go walkDirectories()
 	//Listen on port 3001
 	log.Fatal(http.ListenAndServe(":3001", nil))
 
 }
 
-func openDB() *bolt.DB {
-	db, err := bolt.Open(photosPath+"photos.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+func openDB(readOnly bool) *bolt.DB {
+	db, err := bolt.Open(photosPath+"photos.db", 0600, &bolt.Options{Timeout: 1 * time.Second, ReadOnly: readOnly})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,7 +40,7 @@ func openDB() *bolt.DB {
 }
 
 func walkDirectories() {
-	db := openDB()
+	db := openDB(false)
 	defer db.Close()
 	fileList := []string{}
 	currentBucket := ""
@@ -66,12 +65,15 @@ func walkDirectories() {
 		} else {
 			//ignore the photos.db file else things pertains to music!
 			//ignore other files that aren't interesting (like ddesktop.ini)
-			db.Update(func(tx *bolt.Tx) error {
-				//read file exif info
-				b := tx.Bucket([]byte(currentBucket))
-				err := b.Put([]byte(path), []byte(getFileInfoFromPathName(path)))
-				return err
-			})
+			if strings.Contains(strings.ToLower(path), ".jpg") || strings.Contains(strings.ToLower(path), ".mp4") {
+				db.Update(func(tx *bolt.Tx) error {
+					//read file exif info
+					b := tx.Bucket([]byte(currentBucket))
+					err := b.Put([]byte(path), []byte(getFileInfoFromPathName(path)))
+					return err
+				})
+
+			}
 
 		}
 		return nil
@@ -82,7 +84,8 @@ func walkDirectories() {
 	}
 }
 
-type fileInfo struct {
+//FileInfo structure
+type FileInfo struct {
 	Name        string
 	Size        int64
 	Mode        os.FileMode
@@ -91,7 +94,7 @@ type fileInfo struct {
 	ContentType string
 }
 
-func getFileInfo(pathName string, name string, size int64, mode os.FileMode, modtime time.Time, isDir bool) fileInfo {
+func getFileInfo(pathName string, name string, size int64, mode os.FileMode, modtime time.Time, isDir bool) FileInfo {
 
 	log.Println("reading file", name)
 	contentType := "folder"
@@ -109,7 +112,7 @@ func getFileInfo(pathName string, name string, size int64, mode os.FileMode, mod
 		contentType = http.DetectContentType(buffer)
 	}
 
-	f := fileInfo{
+	f := FileInfo{
 		Name:        name,
 		Size:        size,
 		Mode:        mode,
@@ -141,7 +144,7 @@ func getFileInfoFromPathName(pathName string) []byte {
 		log.Fatal(err)
 	}
 
-	finfo := fileInfo{
+	finfo := FileInfo{
 		Name:        openFile.Name(),
 		Size:        fi.Size(),
 		Mode:        fi.Mode(),
@@ -153,33 +156,34 @@ func getFileInfoFromPathName(pathName string) []byte {
 	return result
 }
 
-func getFilesForPath(pathName string) []fileInfo {
+func getFilesForPath(pathName string) []FileInfo {
 	log.Println("Entering getFilesForPath")
-	db := openDB()
+	db := openDB(true)
 	defer db.Close()
+	list := []FileInfo{}
 	db.View(func(tx *bolt.Tx) error {
 		log.Printf("geting bucket %s", pathName)
-		b := tx.Bucket([]byte(pathName))
-		c := b.Cursor()
+		if len(pathName) > 0 {
+			b := tx.Bucket([]byte(pathName))
+			c := b.Cursor()
 
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			log.Printf("key=%s, value=%s\n", k, v)
+			for k, v := c.First(); k != nil; k, v = c.Next() {
+				var file FileInfo
+				_ = json.Unmarshal(v, &file)
+				log.Printf("key=%s, value=%s\n", k, v)
+				list = append(list, file)
+			}
+		} else {
+			return tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
+				f := getFileInfo(pathName, string(name), 0, 0777, time.Now(), true)
+
+				list = append(list, f)
+				log.Println(string(name))
+				return nil
+			})
 		}
-		// v := b.Get([]byte(path))
-		// fmt.Printf("The answer is: %s\n", v)
 		return nil
 	})
-	files, err := ioutil.ReadDir(photosPath + pathName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	list := []fileInfo{}
-
-	for _, file := range files {
-		f := getFileInfo(pathName, file.Name(), file.Size(), file.Mode(), file.ModTime(), file.IsDir())
-		list = append(list, f)
-	}
 	return list
 }
 
@@ -188,13 +192,12 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		queryValues := r.URL.Query()
 		pathName := queryValues.Get("pathname")
-		log.Println(pathName)
 		if strings.Compare(pathName, "undefined") == 0 {
 			http.Error(w, "no path provided", http.StatusInternalServerError)
 			return
 		}
 		log.Println("Get Method called for getHandler with path", pathName)
-		file, err := os.Open(photosPath + pathName)
+		file, err := os.Open(pathName)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -217,11 +220,12 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "no path provided", http.StatusInternalServerError)
 			return
 		}
-		output, err := json.Marshal(getFilesForPath(pathName))
+		files := getFilesForPath(pathName)
+		output, err := json.Marshal(files)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println(string(output))
+		//log.Println(string(output))
 		w.Write(output)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)

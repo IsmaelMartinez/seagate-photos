@@ -97,7 +97,7 @@ class PhotosApp extends Component {
 
                             links.push({
                                 'alt': json[i].Name,
-                                'src': 'http://localhost:3001/get?pathname=' + pathname + '/' + json[i].Name,
+                                'src': 'http://localhost:3001/get?pathname=' + json[i].Name,
                                 'caption': json[i].Name,
                                 'contentType': json[i].ContentType
                             });
