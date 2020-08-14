@@ -8,7 +8,7 @@
     "htmlparser2-react": "0.0.4",
     "lodash": "4.17.20",
     "lodash.throttle": "4.1.1",
-    "moment": "2.22.2",
+    "moment": "2.27.0",
     "react": "16.6.0",
     "react-dom": "16.6.0",
     "react-dropzone": "7.0.1",
