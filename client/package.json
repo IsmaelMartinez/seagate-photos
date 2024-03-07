@@ -16,7 +16,7 @@
     "react-images": "1.1.7",
     "react-infinite-scroller": "1.2.4",
     "react-photo-gallery": "8.0.0",
-    "react-router-dom": "5.2.0",
+    "react-router-dom": "6.22.3",
     "react-scripts": "4.0.3",
     "react-select": "4.3.0",
     "superagent": "6.1.0"
